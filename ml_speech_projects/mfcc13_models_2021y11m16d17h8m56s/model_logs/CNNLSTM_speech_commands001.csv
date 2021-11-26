@@ -1,0 +1,23 @@
+model type,cnnlstm
+epochs,30
+num lstm cells,30
+cnn feature maps,32
+cnn kernel size,"(8, 4)"
+cnn maxpooling pool size,"(3, 3)"
+optimizer,<keras.optimizer_v2.adam.Adam object at 0x000001BCC39AF850>
+num training data,41250
+label 1.0 representation in training,4501
+label 3.0 representation in training,4500
+label 4.0 representation in training,4500
+label 2.0 representation in training,4500
+label 0.0 representation in training,4500
+label 0.0 representation in validation,3607
+label 4.0 representation in validation,3605
+label 3.0 representation in validation,3607
+label 1.0 representation in validation,3609
+label 2.0 representation in validation,3602
+loss type,sparse_categorical_crossentropy
+activation output,softmax
+test acc,84.667
+test loss,0.51
+duration in minutes,3.826
