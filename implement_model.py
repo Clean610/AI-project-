@@ -8,6 +8,7 @@ import librosa
 from keras.models import load_model
 
 import feature_extraction_scripts.feature_extraction_functions as featfun
+import feature_extraction_scripts.prep_noise as pn
 
 def get_date():
     time = datetime.datetime.now()
@@ -24,6 +25,48 @@ def record_sound(sec,message):
 def str2bool(bool_string):
     bool_string = bool_string=="True"
     return bool_string
+
+def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project):
+    #collect new speech 
+    speech,sr = record_sound(4,"Please say *loud and clear* one of the target words. \nRecording")
+    #save sound
+    recording_folder = "{}/recordings".format(head_folder_curr_project)
+    if not os.path.exists(recording_folder):
+        os.makedirs(recording_folder)
+    
+    timestamp = get_date()
+    speech_filename = "{}/speech_{}.wav".format(recording_folder,timestamp)
+    sf.write(speech_filename,speech,sr)
+    
+    y_speech, sr = librosa.load(speech_filename,sr=sr)
+    
+    
+    
+    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,speech_filename,feature_type,num_filters,num_feature_columns,recording_folder)
+    
+    
+    #need to reshape data for various models..
+    #find out which models:
+    with open(model_log_path, mode='r') as infile:
+        reader = csv.reader(infile)            
+        dict_model_settings = {rows[0]:rows[1] for rows in reader}
+        
+    model_type = dict_model_settings["model type"]
+    activation_output = dict_model_settings["activation output"]
+    
+    
+
+    X = features
+    if model_type == "lstm":
+        X = X.reshape((timesteps,frame_width,X.shape[1]))
+    elif model_type == "cnn":
+        X = X.reshape((X.shape[0],X.shape[1],1))
+        X = X.reshape((1,)+X.shape)
+    elif model_type == "cnnlstm":
+        X = X.reshape((timesteps,frame_width,X.shape[1],1))
+        X = X.reshape((1,)+X.shape)        
+    return X
+
 
 def main(project_head_folder,model_name):
 
@@ -62,63 +105,34 @@ def main(project_head_folder,model_name):
     for key, value in dict_labels_encoded.items():
         print(value)
         
-    #collect new speech 
-    speech,sr = record_sound(4,"Please say *loud and clear* one of the target words. \nRecording")
-    #save sound
-    recording_folder = "{}/recordings".format(head_folder_curr_project)
-    if not os.path.exists(recording_folder):
-        os.makedirs(recording_folder)
-    
-    timestamp = get_date()
-    speech_filename = "{}/speech_{}.wav".format(recording_folder,timestamp)
-    sf.write(speech_filename,speech,sr)
-    
-    y_speech, sr = librosa.load(speech_filename,sr=sr)
-    
-    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,speech_filename,feature_type,num_filters,num_feature_columns,recording_folder,delta=delta,dom_freq=dom_freq)
-    
-    
-    #reshape data for various models..
-    #find out which models:
-    with open(model_log_path, mode='r') as infile:
-        reader = csv.reader(infile)            
-        dict_model_settings = {rows[0]:rows[1] for rows in reader}
-        
-    model_type = dict_model_settings["model type"]
-    
-    
-
-    X = features
-    if model_type == "lstm":
-        X = X.reshape((timesteps,frame_width,X.shape[1]))
-    elif model_type == "cnn":
-        X = X.reshape((X.shape[0],X.shape[1],1))
-        X = X.reshape((1,)+X.shape)
-    elif model_type == "cnnlstm":
-        X = X.reshape((timesteps,frame_width,X.shape[1],1))
-        X = X.reshape((1,)+X.shape)        
-    
     
     #load model
     model = load_model(model_path)
-    
+
+    X = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
     prediction = model.predict(X)
-    pred = str(np.argmax(prediction[0]))
-    
+    pred = str(np.argmax(prediction[0]))    
     label = dict_labels_encoded[pred]
     print("Label without noise reduction: {}".format(label))
-    
 
+    if label == "ThoRaKhom":
+        Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
+        prediction_2 = model.predict(Y)
+        pred_2 = str(np.argmax(prediction_2[0]))
     
-    
+        label_2 = dict_labels_encoded[pred_2]
+        print("Command is: {}".format(label_2))
+    else:
+        pass
+
     return None
 
 if __name__=="__main__":
     
-    project_head_folder = "mfcc13_models_2021y11m16d17h8m56s"
+    project_head_folder = "mfcc13_models_2021y11m17d23h17m51s"
     model_name = "CNNLSTM_speech_commands001"
-    
-    main(project_head_folder,model_name)
+    while True:
+        main(project_head_folder,model_name)
         
     
             
