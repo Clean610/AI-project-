@@ -22,7 +22,7 @@ def str2bool(bool_string):
     return bool_string
     
 
-def main_detect_trigger(X,project_head_folder,model_name):
+def main_detect_trigger(project_head_folder,model_name):
     
     head_folder_beg = "./ml_speech_projects/"
     head_folder_curr_project = head_folder_beg+project_head_folder
@@ -66,7 +66,7 @@ def main_detect_trigger(X,project_head_folder,model_name):
     for key, value in dict_labels_encoded.items():
         print(value)
         
-    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,feature_type,num_filters,num_feature_columns,delta=delta,dom_freq=dom_freq,noise_wavefile=None,vad=vad)
+    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,feature_type,num_filters,num_feature_columns,delta=delta,dom_freq=dom_freq,vad=vad)
      
     with open(model_log_path, mode='r') as infile:
         reader = csv.reader(infile)            
@@ -109,7 +109,7 @@ def has_new_triggerword(prediction, chunk_duration, feed_duration, threshold=0.5
     Function to detect new trigger word in the latest chunk of input audio.
     It is looking for the rising edge of the predictions data belongs to the
     last/latest chunk.
-    Argument:
+    Argument:d
     predictions -- predicted labels from model
     chunk_duration -- time in second of a chunk
     feed_duration -- time in second of the input to model
@@ -238,7 +238,7 @@ try:
     while run:
         data = q.get()
         mfcc = main_detect_trigger(data)
-        preds = detect_triggerword_spectrum(mfcc)
+        preds = mfcc
         new_trigger = has_new_triggerword(preds, chunk_duration, feed_duration)
         if new_trigger:
             sys.stdout.write('1')
