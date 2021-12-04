@@ -8,7 +8,6 @@ import librosa
 from keras.models import load_model
 
 import feature_extraction_scripts.feature_extraction_functions as featfun
-import feature_extraction_scripts.prep_noise as pn
 
 def get_date():
     time = datetime.datetime.now()
@@ -46,8 +45,6 @@ def main(project_head_folder,model_name):
     num_feature_columns = int(feats_dict['num total features'])
     delta = str2bool(feats_dict["delta"])
     dom_freq = str2bool(feats_dict["dominant frequency"])
-    noise = str2bool(feats_dict["noise"])
-    vad = str2bool(feats_dict["beginning silence removal"])
     timesteps = int(feats_dict['timesteps'])
     context_window = int(feats_dict['context window'])
     frame_width = context_window*2+1
@@ -58,54 +55,36 @@ def main(project_head_folder,model_name):
         label_for_dict = []  
         for rows in reader:
             label_for_dict.extend(rows)
-            print(label_for_dict)
-            print(label_for_dict[1])
-        # dict_labels_encoded = {}
         dict_labels_encoded = {label_for_dict[0]:label_for_dict[1] , label_for_dict[2]:label_for_dict[3], label_for_dict[4]:label_for_dict[5], label_for_dict[6]:label_for_dict[7], label_for_dict[8]:label_for_dict[9] }
-        # for i in range(label_for_dict):
-        #     dict_labels = {label_for_dict[1],label_for_dict[2]}
-        #     dict_labels_encoded.append(dict_labels)
-        print(dict_labels_encoded)
+
     
     print("\nAvailable labels:")
     for key, value in dict_labels_encoded.items():
         print(value)
         
     #collect new speech 
-    noise, sr = record_sound(4,"Recording background noise")
-    speech,sr = record_sound(3,"Please say *loud and clear* one of the target words. \nRecording")
+    speech,sr = record_sound(4,"Please say *loud and clear* one of the target words. \nRecording")
     #save sound
     recording_folder = "{}/recordings".format(head_folder_curr_project)
     if not os.path.exists(recording_folder):
         os.makedirs(recording_folder)
     
     timestamp = get_date()
-    noise_filename = "{}/noise_{}.wav".format(recording_folder,timestamp)
-    sf.write(noise_filename,noise,sr)
     speech_filename = "{}/speech_{}.wav".format(recording_folder,timestamp)
     sf.write(speech_filename,speech,sr)
     
     y_speech, sr = librosa.load(speech_filename,sr=sr)
-    y_noise, sr = librosa.load(noise_filename,sr=sr)
     
-    speech_rd = pn.rednoise(y_speech,y_noise,sr)
-    speech_rd_filename = "{}/speech_noisereduced_{}.wav".format(recording_folder,timestamp)
-    sf.write(speech_rd_filename,speech_rd,sr)
+    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,speech_filename,feature_type,num_filters,num_feature_columns,recording_folder,delta=delta,dom_freq=dom_freq)
     
     
-    features = featfun.coll_feats_manage_timestep(timesteps,frame_width,speech_filename,feature_type,num_filters,num_feature_columns,recording_folder,delta=delta,dom_freq=dom_freq,noise_wavefile=None,vad=vad)
-    
-    # features2 = featfun.coll_feats_manage_timestep(timesteps,frame_width,speech_rd_filename,feature_type,num_filters,num_feature_columns,recording_folder,delta=delta,dom_freq=dom_freq,noise_wavefile=None,vad=vad)
-    
-    
-    #need to reshape data for various models..
+    #reshape data for various models..
     #find out which models:
     with open(model_log_path, mode='r') as infile:
         reader = csv.reader(infile)            
         dict_model_settings = {rows[0]:rows[1] for rows in reader}
         
     model_type = dict_model_settings["model type"]
-    activation_output = dict_model_settings["activation output"]
     
     
 
@@ -129,29 +108,14 @@ def main(project_head_folder,model_name):
     label = dict_labels_encoded[pred]
     print("Label without noise reduction: {}".format(label))
     
-        
-    X = features2
-    if model_type == "lstm":
-        X = X.reshape((timesteps,frame_width,X.shape[1]))
-    elif model_type == "cnn":
-        X = X.reshape((X.shape[0],X.shape[1],1))
-        X = X.reshape((1,)+X.shape)
-    elif model_type == "cnnlstm":
-        X = X.reshape((timesteps,frame_width,X.shape[1],1))
-        X = X.reshape((1,)+X.shape)
-        
-    prediction = model.predict(X)
-    # show the inputs and predicted outputs
-    pred = str(np.argmax(prediction[0]))
-    label = dict_labels_encoded[pred]
-    print("Label with noise reduction: {}".format(label))
+
     
     
     return None
 
 if __name__=="__main__":
     
-    project_head_folder = "mfcc13_models_2021y11m14d23h4m53s"
+    project_head_folder = "mfcc13_models_2021y11m16d17h8m56s"
     model_name = "CNNLSTM_speech_commands001"
     
     main(project_head_folder,model_name)
