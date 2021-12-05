@@ -6,21 +6,48 @@ import sounddevice as sd
 import soundfile as sf
 import librosa
 from keras.models import load_model
-
+import time as tm
+import sys
+from queue import Queue
 import feature_extraction_scripts.feature_extraction_functions as featfun
 import feature_extraction_scripts.prep_noise as pn
+import pyaudio
 
 def get_date():
     time = datetime.datetime.now()
     time_str = "{}d{}h{}m{}s".format(time.day,time.hour,time.minute,time.second)
     return(time_str)
 
+# feed_samples=64000
+# q = Queue()
+# sound = np.zeros(feed_samples, dtype='int16')
+# run = True
+# silence_threshold = 100
+# duration = 5.5  # seconds
+times = list()
+duration = 5.5
+
+def callback(indata, outdata, frames, time, status):
+    global times
+    if status:
+        print("stop")
+        times.append(tm.time())
+    outdata[:] = indata
+with sd.RawStream(channels=1, dtype='int24', callback=callback):
+    sd.sleep(int(duration * 1000))
+    
+    
+
 def record_sound(sec,message):
+    
     sr = 16000
     print(message+" for {} seconds..".format(sec))
     sound = sd.rec(int(sec*sr),samplerate=sr,channels=1)
     sd.wait()
     return sound, sr
+
+  
+    
 
 def str2bool(bool_string):
     bool_string = bool_string=="True"
@@ -129,7 +156,7 @@ def main(project_head_folder,model_name):
 
 if __name__=="__main__":
     
-    project_head_folder = "mfcc13_models_2021y11m17d23h17m51s"
+    project_head_folder = "mfcc13_models_2021y11m16d17h8m56s"
     model_name = "CNNLSTM_speech_commands001"
     while True:
         main(project_head_folder,model_name)
