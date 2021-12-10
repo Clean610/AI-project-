@@ -24,17 +24,17 @@ def get_date():
 # run = True
 # silence_threshold = 100
 # duration = 5.5  # seconds
-times = list()
-duration = 5.5
+# times = list()
+# duration = 5.5
 
-def callback(indata, outdata, frames, time, status):
-    global times
-    if status:
-        print("stop")
-        times.append(tm.time())
-    outdata[:] = indata
-with sd.RawStream(channels=1, dtype='int24', callback=callback):
-    sd.sleep(int(duration * 1000))
+# def callback(indata, outdata, frames, time, status):
+#     global times
+#     if status:
+#         print("stop")
+#         times.append(tm.time())
+#     outdata[:] = indata
+# with sd.RawStream(channels=1, dtype='int24', callback=callback):
+#     sd.sleep(int(duration * 1000))
     
     
 
@@ -135,22 +135,17 @@ def main(project_head_folder,model_name):
     
     #load model
     model = load_model(model_path)
-
+   
+   
     X = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
     prediction = model.predict(X)
     pred = str(np.argmax(prediction[0]))    
     label = dict_labels_encoded[pred]
-    print("Label without noise reduction: {}".format(label))
-
-    if label == "ThoRaKhom":
-        Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
-        prediction_2 = model.predict(Y)
-        pred_2 = str(np.argmax(prediction_2[0]))
     
-        label_2 = dict_labels_encoded[pred_2]
-        print("Command is: {}".format(label_2))
+    if label == "ThoRaKhom":
+       print("Command is: {}".format(label))
     else:
-        pass
+        print("It's not wake up word please say it again")
 
     return None
 
@@ -161,5 +156,4 @@ if __name__=="__main__":
     while True:
         main(project_head_folder,model_name)
         
-    
-            
+

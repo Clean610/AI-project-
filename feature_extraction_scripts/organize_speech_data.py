@@ -180,7 +180,7 @@ def check_4_dataset_mixing(labels_class,dict_class_dataset_index_list):
     try:
         for train_index in train_indices[0]:
             if train_index in test_indices or train_index in val_indices:
-                raise DatasetMixing("Index {} of class {} is in multiple datasets".format(val_index, label))
+                raise DatasetMixing("Index {} of class {} is in multiple datasets".format(val_indices, label))
         for val_index in val_indices[0]:
             if val_index in train_indices or val_index in test_indices:
                 raise DatasetMixing("Index {} of class {} is in multiple datasets".format(val_index, label))

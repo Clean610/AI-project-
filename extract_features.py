@@ -22,29 +22,14 @@ from feature_extraction_scripts.errors import FeatureExtractionFail, ExitApp
 
 
 def get_date():
-    '''
-    This creates a string of the day, hour, minute and second
-    I use this to make folder names unique
-    
-    For the files themselves, I generate genuinely unique names (i.e. name001.csv, name002.csv, etc.)
-    '''
+
     time = datetime.datetime.now()
     time_str = "{}y{}m{}d{}h{}m{}s".format(time.year,time.month,time.day,time.hour,time.minute,time.second)
     return(time_str)
 
 
 def main(data_path,feature_type,num_filters=None,delta=False,dom_freq=False,noise=False,vad=False,timesteps=None,context_window=None,noise_path=None,limit=None):
-    '''
-    Here defaults are set, if they aren't yet set by the user.
-    
-    Number of Filters OR Number of Coefficients
-    
-    FBANK or mel filterbank energies are produced based on the number of mel filters used. 
-    *20 and 40 are pretty common.
-    
-    MFCCs or mel frequency cepstral coefficients also use mel filters. With additional mathematic equations applied, to ultimately make speech easier for traditional machine learning algorithms to learn (they reduce the colinearity of the features)
-    * 13,20,40 coefficients are not uncommon.
-    '''
+   
     if num_filters is None and feature_type != "stft":
         #Common number of coefficients / filters for MFCC and FBANK is 40
         num_filters = 40
@@ -93,15 +78,7 @@ def main(data_path,feature_type,num_filters=None,delta=False,dom_freq=False,nois
     #create folder to store all data (encoded labels, features)
     if not os.path.exists(head_folder):
         os.makedirs(head_folder)
-        
-    '''
-    Collect all labels in data:
-    Labels should be the subdirectories of the data directory
-    Not included:
-    Folders/files with names:
-    * starting with "_"
-    * are typical GitHub files, like LICENSE
-    '''
+  
     try:
         print("\nFeatures being collected: {}".format(feature_type.upper()))
         print("\nTotal number of feature columns: {}".format(num_feature_columns))
@@ -120,11 +97,6 @@ def main(data_path,feature_type,num_filters=None,delta=False,dom_freq=False,nois
             raise ExitApp()
             
 
-        '''
-        Create labels-encoding dictionary:
-        This helps when saving data later to npy files
-        Integer encode the labels and save with feature data as label column
-        '''
         dict_labels_encoded = orgdata.create_save_dict_labels_encode(labels_class,head_folder)
         
         
@@ -142,14 +114,9 @@ def main(data_path,feature_type,num_filters=None,delta=False,dom_freq=False,nois
                 pass
 
         
-        #############################################
+   
         ############## DATA ORGANIZATION ############
-        
-        '''
-        I made the decision to balance the classes out. Real data doesn't have 
-        balanced classes. But, because this code was prepared for a workshop, 
-        one for exploring how feature extraction influenced deep learning models, I decided to remove that confounding factor.
-        '''
+     
 
         #collect filenames and labels of each filename
         paths, labels_wavefile = orgdata.collect_audio_and_labels(data_path)
@@ -157,20 +124,11 @@ def main(data_path,feature_type,num_filters=None,delta=False,dom_freq=False,nois
         #to balance out the classes, find the label/class w fewest recordings
         max_num_per_class, class_max_samps = orgdata.get_max_samples_per_class(labels_class,labels_wavefile)
 
-        '''
-        Create dictionary with labels and their indices in the lists: labels_wavefile and paths
-        useful in separating the indices into balanced train, validation, and test datasets
-        '''
+       
         dict_class_index_list = orgdata.make_dict_class_index(labels_class,labels_wavefile)
         
-        '''
-        Assign number of recordings for each dataset, 
-        keeping the data balanced between classes
-        Defaults:
-        * .8 of max number of samples --> train
-        * .1 of max number of samples --> validation
-        * .1 of max number of samples --> test
-        '''
+   
+     
         max_nums_train_val_test = orgdata.get_max_nums_train_val_test(max_num_per_class)
 
         #randomly assign indices (evenly across class) to train, val, test datasets:
@@ -242,16 +200,15 @@ if __name__=="__main__":
     num_filters = 13 # Options: 40, 20, 13, Noney
     delta = False # Calculate the 1st and 2nd derivatives of features?
     dom_freq = False # Kinda sorta... Pitch (dominant frequency)
-    noise = False # Add noise to speech data?
+    noise = False # Add noise to speech data
     vad = False # Apply voice activity detection (removes the beginning and ending 'silence'/background noise of recordings)
     timesteps = 5
     context_window = 5
-    #If noise == True, put the pathway to that noise here:
-    # noise_path = "./data/_background_noise_/doing_the_dishes.wav" 
+
 
     main(
         data_path,feature_type,
-        num_filters=num_filters,delta=delta,noise=noise,vad=vad,dom_freq=dom_freq,
-        timesteps=timesteps,context_window=context_window,#noise_path=noise_path,
+        num_filters=num_filters,delta=delta,noise=noise,vad=vad,
+        timesteps=timesteps,context_window=context_window,
         limit = limit
         )
