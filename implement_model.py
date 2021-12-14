@@ -91,7 +91,11 @@ def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,m
         X = X.reshape((1,)+X.shape)
     elif model_type == "cnnlstm":
         X = X.reshape((timesteps,frame_width,X.shape[1],1))
-        X = X.reshape((1,)+X.shape)        
+        X = X.reshape((1,)+X.shape) 
+        print("x is=",X)
+        print("timestep=",timesteps)   
+        print("frame=",frame_width)    
+        print("x.shape=",X.shape[1])
     return X
 
 
@@ -141,11 +145,17 @@ def main(project_head_folder,model_name):
     prediction = model.predict(X)
     pred = str(np.argmax(prediction[0]))    
     label = dict_labels_encoded[pred]
-    
+  
+
     if label == "ThoRaKhom":
-       print("Command is: {}".format(label))
+        Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
+        prediction_2 = model.predict(Y)
+        pred_2 = str(np.argmax(prediction_2[0]))
+        print("Label without noise reduction: {}".format(label))
+        label_2 = dict_labels_encoded[pred_2]
+        print("Command is: {}".format(label_2))
     else:
-        print("It's not wake up word please say it again")
+        print("It not a Wake up word please say it again")
 
     return None
 
@@ -156,4 +166,5 @@ if __name__=="__main__":
     while True:
         main(project_head_folder,model_name)
         
-
+    
+            
