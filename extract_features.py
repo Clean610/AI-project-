@@ -191,7 +191,7 @@ if __name__=="__main__":
     #variables to set:
     
     #which directory has the data?
-    data_path = "./dataset"
+    data_path = "./dataset_5"
     #should there be a limit on how many waves are processed?
     limit = False # Options: False or fraction of data to be extractedy
     #which type of features to extract?
