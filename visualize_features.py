@@ -14,7 +14,7 @@ if __name__=="__main__":
     #VARIABLES FOR THE USER TO SET:
     
     "PoetFai"
-    wav = "./dataset/PoetFai/PoetFai.5.wav"
+    wav = "./dataset_5/PoetFai/PoetFai_-1halfstep.1.wav"
     
     #"bird"
     #wav = "./data/bird/0a7c2a8d_nohash_1.wav"
@@ -23,7 +23,7 @@ if __name__=="__main__":
     #wav = "./data/happy/0c5027de_nohash_0.wav"
     
     #"seven"
-    wav = "./dataset/PoetFai/PoetFai.1.wav"
+    # wav = "./dataset/PoetFai/PoetFai.1.wav"
     
     #variables to set and see how they change the picture
     #which type of features to extract?
@@ -44,7 +44,7 @@ if __name__=="__main__":
     #you can change the scale or keep it constant to stay the same if you'd like. Change this in:
     #function "apply_noise" which is located in the script "feature_extraction_functions.py"
     vad = True # Apply voice activity detection (removes the beginning and ending 'silence'/background noise of recordings)
-    timesteps = 5
+    timesteps = 7
     context_window = 5
     frame_width = context_window*2+1
     

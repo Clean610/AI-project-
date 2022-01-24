@@ -1,21 +1,17 @@
-'''
-Model architectures are inspired from the (conference) paper:
-
-Kim, Myungjong & Cao, Beiming & An, Kwanghoon & Wang, Jun. (2018). Dysarthric Speech Recognition Using Convolutional LSTM Neural Network. 10.21437/interspeech.2018-2250. 
-
-'''
-
 import os
 import time
 import datetime
 from pathlib import Path
-
+from keras.backend import softmax
 import numpy as np
-
+from time import time
+import seaborn as sns
+import pydot
+import graphlib
 #saving and visualizing data
 import matplotlib.pyplot as plt
 import csv
-
+from tensorflow.python.keras.callbacks import TensorBoard
 # for building and training models
 import keras
 
@@ -29,6 +25,10 @@ import tensorflow as tf
 from model_scripts.generator_speech_CNN_LSTM import Generator
 import model_scripts.build_model as build
 
+    
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 #to keep saved files unique
 def unique_path(directory, name_pattern):
@@ -47,7 +47,7 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     #####################################################################
     ######################## HOUSE KEEPING ##############################
     
-    start = time.time()
+    start = time()
     
     print("\n\nWhich folder contains the train, validation, and test datasets you would like to train this model on?\n")
     project_head_folder=input()
@@ -103,14 +103,14 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     #build the model architecture:
     #read up on what they do and feel free to adjust!
     #For the LSTM:
-    lstm_cells = 30 #what I've noticed people implementing..
+    lstm_cells = 20 #what I've noticed people implementing..
     #For the CNN:
     feature_map_filters = 64
     kernel_size = (3,5)
     #maxpooling
     pool_size = (3,3)
     #hidden dense layer
-    dense_hidden_units = 60
+    dense_hidden_units = 15
  
     
     #feel free to adjust model architecture within the script 'build_model.py' in the folder 'model_scripts'
@@ -118,6 +118,11 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     
     #see what the model architecture looks like:
     print(model.summary())
+    dot_img_file = "/ml_speech_projects/mfcc13_models_2021y12m10d0h46m24s/model_1.png"
+    
+    tf.keras.utils.plot_model(model, to_file=dot_img_file,show_shapes=True,show_layer_activations=True)
+
+    # tensorboard = TensorBoard(log_dir="logs/{}".format(time()))
     model.compile(optimizer=optimizer,loss=loss_type,metrics=['accuracy'])
 
     
@@ -126,7 +131,7 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     
     #set up "callbacks" which help you keep track of what goes on during training
     #also saves the best version of the model and stops training if learning doesn't improve 
-    early_stopping_callback = EarlyStopping(monitor='val_loss', patience=patience)
+    # early_stopping_callback = EarlyStopping(monitor='val_loss', patience=patience)
     csv_logging = CSVLogger(filename='{}/{}_log.csv'.format(model_log_folder,modelname))
     checkpoint_callback = ModelCheckpoint('{}/checkpoint_'.format(models_folder)+modelname+'.h5', monitor='val_loss', verbose=1, save_best_only=True, mode='min')
 
@@ -149,18 +154,19 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     #####################################################################
     #################### TRAIN AND TEST THE MODEL #######################
     
-    start_training = time.time()
+    start_training = time()
     #train the model and keep the accuracy and loss stored in the variable 'history'
     #helpful in logging/plotting how training and validation goes
-    history = model.fit_generator(
+    
+    history = model.fit(
             train_generator.generator(),
             steps_per_epoch = train_data.shape[0]/(timesteps*frame_width),
             epochs = epochs,
-            callbacks=[early_stopping_callback, checkpoint_callback],
+            callbacks=[ checkpoint_callback],
             validation_data = val_generator.generator(), 
             validation_steps = val_data.shape[0]/(timesteps*frame_width)
             )
-    end_training = time.time()
+    end_training = time()
     #Note, please examine the generator class in the script "generator_speech_CNN_LSTM.py" in the folder "model_scripts"
     
     
@@ -202,7 +208,7 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
     plt.legend(["train","validation"], loc="upper right")
     plt.savefig("{}/{}_ACCURACY.png".format(graphs_folder,modelname))
     
-    end = time.time()
+    end = time()
     duration_total = round((end-start)/60,3)
     duration_training = round((end_training-start_training)/60,3)
     print("\nTotal duration = {}\nTraining duration = {}\n".format(duration_total,duration_training))
@@ -222,7 +228,7 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
         parameters["cnn feature maps"] = feature_map_filters
         parameters["cnn kernel size"] = kernel_size
         parameters["cnn maxpooling pool size"] = pool_size
-        if "cnn" == model_type.lower():
+        if "cnnlstm" == model_type.lower():
             parameters["cnn dense hidden units"] = dense_hidden_units
     parameters["optimizer"] = optimizer
     parameters["num training data"] = len(train_data)
@@ -244,8 +250,19 @@ def main(model_type,epochs,optimizer,sparse_targets,patience=None):
         w.writerows(parameters.items())
     
     print("\n\nIf you want to implement this model, the model's name is:\n\n{}\n\n".format(modelname))
-    
+
     return True
+  
+
+def show_confusion_matrix(confusion,  test_data):
+  confusion_normalized = confusion.astype("float") / confusion.sum(axis=1)
+  axis_labels =  test_data
+  ax = sns.heatmap(
+      confusion_normalized, xticklabels=axis_labels, yticklabels=axis_labels,
+      cmap='Blues', annot=True, fmt='.2f', square=True)
+  plt.title("Confusion matrix")
+  plt.ylabel("True label")
+  plt.xlabel("Predicted label")
 
 
 
@@ -253,7 +270,7 @@ if __name__ == "__main__":
     
     
     model_type = "cnnlstm" # cnn, lstm, cnnlstm
-    epochs = 30
+    epochs = 3
 #    optimizer = 'adam' # 'adam' 'sgd'
     optimizer = tf.optimizers.Adam(learning_rate=0.001, beta_1=0.7, beta_2=0.770, epsilon=1e-07, amsgrad=True)
     sparse_targets = True 

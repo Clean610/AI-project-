@@ -2,100 +2,65 @@ import os
 import csv
 import datetime
 import numpy as np
-from numpy.lib.financial import rate
 import sounddevice as sd
 import soundfile as sf
 import librosa
 from keras.models import load_model
 import time as tm
 import sys
+from queue import Queue
 import feature_extraction_scripts.feature_extraction_functions as featfun
 import feature_extraction_scripts.prep_noise as pn
 import pyaudio
-from scipy.io.wavfile import write
-import threading
-from array import array
-from queue import Queue, Full
-
-import pyaudio
-
-
-
-
-
-
+from time import time
 def get_date():
     time = datetime.datetime.now()
     time_str = "{}d{}h{}m{}s".format(time.day,time.hour,time.minute,time.second)
     return(time_str)
 
+# feed_samples=64000
+# q = Queue()
+# sound = np.zeros(feed_samples, dtype='int16')
+# run = True
+# silence_threshold = 100
+# duration = 5.5  # seconds
+# times = list()
+# duration = 5.5
 
-def listen(stopped, q):
-    stream = pyaudio.PyAudio().open(
-        format=pyaudio.paInt16,
-        channels=1,
-        rate=16000,
-        input=True,
-        frames_per_buffer=1024,
-    )
-    sr=rate
-    while True:
-        if stopped.wait(timeout=0):
-            break
-        try:
-            q.put(array('h', stream.read(CHUNK_SIZE)))
-        except Full:
-            pass  # discard 
-
+# def callback(indata, outdata, frames, time, status):
+#     global times
+#     if status:
+#         print("stop")
+#         times.append(tm.time())
+#     outdata[:] = indata
+# with sd.RawStream(channels=1, dtype='int24', callback=callback):
+#     sd.sleep(int(duration * 1000))
     
-    return stream,sr
     
+import tensorflow as tf
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 
-def record(stopped, q):
-    while True:
-        if stopped.wait(timeout=0):
-            break
-        chunk = q.get()
-        vol = max(chunk)
-        if vol >= MIN_VOLUME:
-          pass
-        else:
-           ()
+def record_sound(sec,message):
+    duration = 5.5
+    sr = 16000
+    print(message+" for {} seconds..".format(sec))
+    sound = sd.rec(int(sec*sr),samplerate=sr,channels=1)
+    sd.wait()
+    return sound, sr
+
+  
     
 
 def str2bool(bool_string):
     bool_string = bool_string=="True"
     return bool_string
 
-
-CHUNK_SIZE = 1024
-MIN_VOLUME = 500
-BUF_MAX_SIZE = CHUNK_SIZE * 10
-
-
 def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project):
-    #get event and queue
-    stopped = threading.Event()
-    q = Queue(maxsize=int(round(BUF_MAX_SIZE / CHUNK_SIZE)))
-
-    listen_t = threading.Thread(target=listen, args=(stopped, q))
-    listen_t.start()
-    record_t = threading.Thread(target=record, args=(stopped, q))
-    record_t.start()
-
-    try: 
-            listen_t.join(0.1)
-            record_t.join(0.1)
-    except KeyboardInterrupt:
-        stopped.set()
-
-    listen_t.join()
-    record_t.join()
-
-
     #collect new speech 
-    speech,sr = listen
+    speech,sr = record_sound(4,"Please say *loud and clear* one of the target words. \nRecording")
     #save sound
     recording_folder = "{}/recordings".format(head_folder_curr_project)
     if not os.path.exists(recording_folder):
@@ -103,9 +68,9 @@ def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,m
     
     timestamp = get_date()
     speech_filename = "{}/speech_{}.wav".format(recording_folder,timestamp)
-    write(speech_filename,speech,sr)
+    sf.write(speech_filename,speech,sr)
     
-    sr = librosa.load(speech_filename,sr=sr)
+    y_speech, sr = librosa.load(speech_filename,sr=sr)
     
     
     
@@ -131,7 +96,11 @@ def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,m
         X = X.reshape((1,)+X.shape)
     elif model_type == "cnnlstm":
         X = X.reshape((timesteps,frame_width,X.shape[1],1))
-        X = X.reshape((1,)+X.shape)        
+        X = X.reshape((1,)+X.shape) 
+        # print("x is=",X)
+        # print("timestep=",timesteps)   
+        # print("frame=",frame_width)    
+        # print("x.shape=",X.shape[1])
     return X
 
 
@@ -175,28 +144,22 @@ def main(project_head_folder,model_name):
     
     #load model
     model = load_model(model_path)
-
+   
+    # star_record = time()
     X = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
     prediction = model.predict(X)
     pred = str(np.argmax(prediction[0]))    
     label = dict_labels_encoded[pred]
-    print("Label without noise reduction: {}".format(label))
-
-    if label == "ThoRaKhom":
-        Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
-        prediction_2 = model.predict(Y)
-        pred_2 = str(np.argmax(prediction_2[0]))
     
-        label_2 = dict_labels_encoded[pred_2]
-        print("Command is: {}".format(label_2))
-    else:
-        pass
+    print("Label without noise reduction: {}".format(label))
+           
+ 
 
     return None
 
 if __name__=="__main__":
     
-    project_head_folder = "mfcc13_models_2021y11m16d17h8m56s"
+    project_head_folder = "mfcc13_models_2021y12m10d0h46m24s"
     model_name = "CNNLSTM_speech_commands001"
     while True:
         main(project_head_folder,model_name)

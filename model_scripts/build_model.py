@@ -1,6 +1,7 @@
 from keras.models import Model, Sequential
 from keras.layers import Dense, Conv2D, Flatten, LSTM, MaxPooling2D, Dropout, TimeDistributed, ConvLSTM2D
 from tensorflow.keras import regularizers
+import numpy as np
 
 def assign_model_settings(num_labels,sparse_targets):
     if num_labels <= 2:
@@ -11,8 +12,8 @@ def assign_model_settings(num_labels,sparse_targets):
         activation_output = 'softmax' # binary = "sigmoid"; multiple classification = "softmax"
     if sparse_targets:
         loss_type = 'sparse_categorical_crossentropy' # if data have mutiple labels which are only integer encoded, *not* one hot encoded.
+        activation_output = 'softmax'
     return loss_type,activation_output
-
 
 def buildmodel(model_type,num_labels,frame_width,timesteps,num_features,lstm_cells,feature_map_filters,kernel_size,pool_size,dense_hidden_units,activation_output):
     if 'lstm' == model_type.lower():
@@ -32,6 +33,7 @@ def buildmodel(model_type,num_labels,frame_width,timesteps,num_features,lstm_cel
     elif 'cnnlstm' == model_type.lower():
         cnn = Sequential()
         cnn.add(Conv2D(feature_map_filters, kernel_size=kernel_size, activation='relu'))
+        cnn.add(Conv2D(32, kernel_size=kernel_size, activation='relu'))
         #non-overlapping pool_size 3x3
         cnn.add(MaxPooling2D(pool_size=pool_size))
         cnn.add(Dropout(0.25))
@@ -44,8 +46,8 @@ def buildmodel(model_type,num_labels,frame_width,timesteps,num_features,lstm_cel
         model.add(LSTM(lstm_cells,return_sequences=True))
 
     model.add(Flatten())
-    model.add(Dense(num_labels,activation=activation_output,kernel_regularizer=regularizers.l1_l2(l1=0.005, l2=0.005))) 
- 
-    return model
+    model.add(Dense(num_labels,activation=activation_output,kernel_regularizer=regularizers.l1_l2(l1=0.001, l2=0.001))) 
+    exps = np.exp(activation_output)
+    return model , exps / np.sum(exps)
 
 

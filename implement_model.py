@@ -12,7 +12,7 @@ from queue import Queue
 import feature_extraction_scripts.feature_extraction_functions as featfun
 import feature_extraction_scripts.prep_noise as pn
 import pyaudio
-
+from time import time
 def get_date():
     time = datetime.datetime.now()
     time_str = "{}d{}h{}m{}s".format(time.day,time.hour,time.minute,time.second)
@@ -37,9 +37,14 @@ def get_date():
 #     sd.sleep(int(duration * 1000))
     
     
+import tensorflow as tf
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+if len(physical_devices) > 0:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
 
 def record_sound(sec,message):
-    
+    duration = 5.5
     sr = 16000
     print(message+" for {} seconds..".format(sec))
     sound = sd.rec(int(sec*sr),samplerate=sr,channels=1)
@@ -92,10 +97,10 @@ def predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,m
     elif model_type == "cnnlstm":
         X = X.reshape((timesteps,frame_width,X.shape[1],1))
         X = X.reshape((1,)+X.shape) 
-        print("x is=",X)
-        print("timestep=",timesteps)   
-        print("frame=",frame_width)    
-        print("x.shape=",X.shape[1])
+        # print("x is=",X)
+        # print("timestep=",timesteps)   
+        # print("frame=",frame_width)    
+        # print("x.shape=",X.shape[1])
     return X
 
 
@@ -140,29 +145,32 @@ def main(project_head_folder,model_name):
     #load model
     model = load_model(model_path)
    
-   
+    # star_record = time()
     X = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
     prediction = model.predict(X)
     pred = str(np.argmax(prediction[0]))    
     label = dict_labels_encoded[pred]
-  
-
-    if label == "ThoRaKhom":
-        Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
-        prediction_2 = model.predict(Y)
-        pred_2 = str(np.argmax(prediction_2[0]))
-        print("Label without noise reduction: {}".format(label))
-        label_2 = dict_labels_encoded[pred_2]
-        print("Command is: {}".format(label_2))
-    else:
-        print("It not a Wake up word please say it again")
-
+ 
+    print("Label without noise reduction: {}".format(label))
+    
+    # if label == "ThoRaKhom":
+    #     Y = predict(timesteps,frame_width,feature_type,num_filters,num_feature_columns,model_log_path,head_folder_curr_project)
+    #     prediction_2 = model.predict(Y)
+    #     pred_2 = str(np.argmax(prediction_2[0]))
+    #     print("Label without noise reduction: {}".format(label))
+    #     label_2 = dict_labels_encoded[pred_2]
+    #     print("Command is: {}".format(label_2))      
+        # probLabel = tf.nn.softmax(pred_2).np()
+        # print(probLabel)
+    # else:
+    # print("It not a Wake up word please say it again")
+    
     return None
 
 if __name__=="__main__":
     
-    project_head_folder = "mfcc13_models_2021y11m16d17h8m56s"
-    model_name = "CNNLSTM_speech_commands001"
+    project_head_folder = "mfcc40_models_2022y1m21d18h33m55s"
+    model_name = "CNNLSTM_speech_commands.001"
     while True:
         main(project_head_folder,model_name)
         

@@ -1,0 +1,16 @@
+data path,./data2
+limit,False
+features,mfcc
+num original features,40
+num total features,40
+delta,False
+dominant frequency,False
+noise,False
+beginning silence removal,True
+timesteps,5
+context window,5
+num classes,5
+time stamp,2022y1m21d18h33m55s
+duration in minutes,1.32
+class fewest samples,PoetFai
+max num samps per class,689
